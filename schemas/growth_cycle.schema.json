@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ω-GROWER Growth Cycle",
+  "type": "object",
+  "required": ["cycle_id", "intent", "relations", "hypotheses", "status"],
+  "properties": {
+    "cycle_id": {"type": "string"},
+    "intent": {"type": "object", "required": ["goal"], "properties": {"goal": {"type": "string"}, "constraints": {"type": "array", "items": {"type": "string"}}, "success_criteria": {"type": "array", "items": {"type": "string"}}}},
+    "relations": {"type": "array", "items": {"type": "object", "required": ["source", "relation", "target"], "properties": {"source": {"type": "string"}, "relation": {"type": "string"}, "target": {"type": "string"}, "value": {}, "provenance": {"type": "string"}}}},
+    "hypotheses": {"type": "array", "items": {"type": "object", "required": ["id", "claim", "null_hypothesis"], "properties": {"id": {"type": "string"}, "claim": {"type": "string"}, "null_hypothesis": {"type": "string"}, "predictions": {"type": "array", "items": {"type": "string"}}, "status": {"type": "string"}}}},
+    "experiments": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "protocol": {"type": "string"}, "metrics": {"type": "array", "items": {"type": "string"}}, "controls": {"type": "array", "items": {"type": "string"}}}}},
+    "evidence": {"type": "array", "items": {"type": "object", "properties": {"source": {"type": "string"}, "result": {"type": "string"}, "scope": {"type": "string"}}}},
+    "status": {"enum": ["CANDIDATE", "TESTING", "SUPPORTED", "PARTIAL", "NOT_PROVEN", "FAIL", "INVALID", "ARCHIVED"]}
+  }
+}
