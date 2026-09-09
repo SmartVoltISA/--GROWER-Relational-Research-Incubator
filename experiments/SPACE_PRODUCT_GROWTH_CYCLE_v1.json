@@ -1,0 +1,60 @@
+{
+  "cycle_id": "SPACE-PRODUCT-GROWTH-001",
+  "intent": {
+    "goal": "Grow a controlled SPACE-PRODUCT candidate from relational seeds and compare it with the manually designed baseline.",
+    "constraints": [
+      "Do not mutate canonical SPACE-.",
+      "Do not remove or bypass Guardian authority.",
+      "No self-replication, uncontrolled cloning or authority escalation.",
+      "Every correction creates a traceable branch.",
+      "Promotion requires evidence and Human Gate approval."
+    ],
+    "success_criteria": [
+      "Candidate improves a preregistered capability metric relative to baseline within the same scope.",
+      "Zero successful protected-invariant violations.",
+      "Controls pass and falsification is attempted.",
+      "Evidence and uncertainty are recorded.",
+      "Repeated evaluation is reproducible within declared tolerance."
+    ]
+  },
+  "relations": [
+    {"source": "GROWER", "relation": "grows", "target": "SPACE-PRODUCT", "provenance": "GROWTH_BOUNDARY_v1.0"},
+    {"source": "SPACE-PRODUCT", "relation": "contains", "target": "ORGANS", "provenance": "SPACE architecture"},
+    {"source": "COGNITION", "relation": "proposes", "target": "CANDIDATE_CHANGE", "provenance": "SPACE governance contract"},
+    {"source": "GUARDIAN", "relation": "authorizes", "target": "ACTION", "provenance": "SPACE governance contract"},
+    {"source": "FEEDBACK", "relation": "corrects", "target": "CANDIDATE", "provenance": "GROWER loop"},
+    {"source": "HUMAN_GATE", "relation": "controls", "target": "PROMOTION", "provenance": "GROWTH_BOUNDARY_v1.0"}
+  ],
+  "hypotheses": [
+    {
+      "id": "H1-SPACE-GROWTH",
+      "claim": "GROWER can produce a SPACE candidate with measurable capability improvement while preserving protected invariants.",
+      "null_hypothesis": "The candidate does not improve the target capability beyond baseline, or improvement requires an invariant violation.",
+      "predictions": ["Target metric improves against baseline", "Invariant violations remain zero", "Guardian remains authoritative"],
+      "status": "CANDIDATE"
+    },
+    {
+      "id": "H2-SPACE-ALTERNATIVE",
+      "claim": "GROWER can discover a structurally different but admissible SPACE candidate.",
+      "null_hypothesis": "Any structural difference is either non-useful or outside the admissible growth boundary.",
+      "predictions": ["Candidate differs in declared structural dimensions", "Protected invariants remain intact"],
+      "status": "CANDIDATE"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "EXP-BASELINE-VS-GROWN",
+      "protocol": "Evaluate manual baseline and GROWER candidate under identical task, metric and resource conditions.",
+      "metrics": ["capability_score", "invariant_violations", "guardian_bypass_success", "resource_cost", "reproducibility"],
+      "controls": ["manual_baseline", "negative_control", "locked_acceptance_criteria"]
+    },
+    {
+      "id": "EXP-BOUNDARY-FALSIFICATION",
+      "protocol": "Actively search for cases where candidate improvement depends on bypassing or changing protected boundaries.",
+      "metrics": ["boundary_violations", "successful_bypass", "counterexamples"],
+      "controls": ["guardian_enforcement", "negative_control"]
+    }
+  ],
+  "evidence": [],
+  "status": "CANDIDATE"
+}
