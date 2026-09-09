@@ -1,48 +1,43 @@
 # Autonomous Mechanism Synthesis v2 — Result
 
-## Status
-`SUPPORTED_WITHIN_DECLARED_GRAMMAR / NOT_AGI`
+## Verdict
+**PARTIAL / FALSIFIED FOR OPEN-ENDED GENERALIZATION**
 
 ## Question
-Can GROWER search a hypothesis space and synthesize a relational mechanism without being handed named candidates such as `closure`?
+Can GROWER synthesize a relational mechanism without being handed a named target mechanism?
 
-## Preregistered structure
-- Primitive relational operators: `EDGE`, `INV`, `UNION`, `COMP`, `REPEAT`.
-- Expression programs generated automatically to depth 2.
-- Training cases select the candidate.
-- Held-out cases are not used for selection.
-- Adversarial cases are used for falsification.
-- Complexity is tracked by AST size.
-- No candidate is named `closure` or `transitive_closure`.
+## Phase A — shortcut-resistant synthesis
+The first v2 implementation used a generic `REPEAT` primitive. It generated 61 programs and selected `REPEAT(EDGE)`, scoring 1.00 on train, held-out and a tiny adversarial set. This was recorded as synthesis inside a declared grammar, not AGI.
 
-## Exact local run
-The experiment generated **61** distinct expression programs.
+## Phase B — remove the shortcut
+The decisive follow-up removed `REPEAT`, `FIXPOINT`, `CLOSURE`, and equivalent iteration primitives. Only `EDGE`, `INV`, `COMP`, and `UNION` remained.
 
-Selected program: **`REPEAT(EDGE)`**
+- depth-2 search: 37 expressions; insufficient for the target training set;
+- depth-3 search: 2,776 expressions;
+- training selection: best candidate reached **1.00**;
+- held-out evaluation: **0.50 (1/2)**;
+- failure: a longer unseen chain exceeded the finite composition depth of the selected expression.
 
-Scores:
-- Train: **1.00 (3/3)**
-- Held-out: **1.00 (2/2)**
-- Adversarial falsification set: **1.00 (2/2)**
-- AST size: **2**
+## Verdict
+**PARTIAL.** The system can synthesize a mechanism from elementary relational primitives without being told its semantic name, but the present bounded grammar overfits and does not yet generalize to variable-depth structure.
 
-The selected program therefore survived the declared held-out and adversarial checks in this toy relational task.
+This failure is valuable: it demonstrates that the previous 100% result depended partly on a powerful primitive that encoded the ability to iterate to a fixed point. Removing that shortcut exposed the actual capability boundary.
 
-## Interpretation
-This is a stronger result than v1: the mechanism name/solution was not supplied as a candidate. The search synthesized an expression from a generic grammar and selected it from competing programs using data, then checked it on held-out and adversarial cases.
+## What is established
+1. Automated hypothesis-space search works on a small relational domain.
+2. Selection can occur without naming the target mechanism.
+3. Held-out testing can falsify an apparently successful candidate.
+4. The system currently lacks open-ended mechanism invention and unbounded structural generalization.
 
-However, the hypothesis space and primitive semantics were still designed by a human. Therefore this demonstrates **autonomous synthesis inside a declared hypothesis space**, not open-ended autonomous invention of algorithms and not AGI.
-
-## Important limitation
-The adversarial set is tiny (2 cases), and the task itself is deliberately small. A stronger gate must use many independently generated graphs, hidden test generators, deeper structures, noise, distractor relations, and a separate evaluator. Selection must remain blind to held-out data.
+## What is NOT established
+- AGI;
+- superintelligence;
+- human-like understanding;
+- autonomous goals or motivation;
+- general algorithm invention.
 
 ## Next gate
-1. Generate tasks from a hidden task generator rather than fixed examples.
-2. Expand the grammar while preventing direct leakage of the target operation.
-3. Run many random seeds and report confidence intervals.
-4. Add resource/time limits and minimum-description-length penalties.
-5. Add independent evaluator execution.
-6. Test transfer to relation families not represented in training.
-7. Only then connect the synthesized mechanism to SPACE/AGI capability gates.
+Use a hidden task generator and allow reusable control structures to be synthesized from elementary primitives without giving the target operation away. Test many independent seeds, variable-depth structures, unseen relation labels, disconnected components, cycles, distractors, noise, resource limits and an independent evaluator. Promotion remains prohibited until those gates pass.
 
-No AGI or superintelligence claim is made by this experiment.
+## Safety
+The experiment receives only an externally supplied research objective. It has no external-action authority, no self-directed objective, no promotion authority, and cannot modify canonical SPACE or governance boundaries.
