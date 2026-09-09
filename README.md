@@ -10,6 +10,13 @@ EN: An incubator that grows verifiable structures from relations through hypothe
 ## Core loop
 `intention → relations → candidate → hypothesis → experiment → observation → falsification → correction → re-test → evidence → promotion / archive`
 
+## Controlled growth
+Growth is deliberately bounded. Each cycle declares its goal, invariants, structural and behavioral limits, safety limits, resource limits, evidence requirements and exit criteria. Candidates may explore inside this space, but cannot redefine the boundary and then use that new boundary to justify promotion.
+
+Boundary changes are separate hypotheses and require independent testing plus Human Gate approval. Protected SPACE invariants include identity, cognition/authority separation, Guardian authority, no self-replication or authority escalation, canonical SPACE immutability, traceable branches, evidence-backed promotion and human stop/reject/redirect authority.
+
+The first controlled target is **SPACE-PRODUCT**: compare the manually designed baseline against a GROWER-grown candidate under the same declared test conditions. This is a controlled-growth experiment, not an AGI claim.
+
 ## Architecture
 - **INTENT** — human goal, constraints and success criteria.
 - **RELATION SEED** — typed entities, relations, observations and transformations.
