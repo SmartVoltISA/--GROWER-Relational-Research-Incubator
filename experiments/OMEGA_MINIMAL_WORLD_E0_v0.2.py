@@ -57,7 +57,6 @@ def interaction_pairs(agents: list[Agent]) -> list[tuple[int, int]]:
 
 
 def resource_transfer(a: Agent, b: Agent) -> float:
-    # Neutral local exchange: only surplus above half-capacity is transferable.
     if a.resource > b.resource:
         donor, receiver = a, b
     else:
@@ -70,11 +69,8 @@ def resource_transfer(a: Agent, b: Agent) -> float:
 def run(condition: str, seed: int) -> dict:
     rng = random.Random(seed)
     agents = [Agent(rng.random(), rng.random()) for _ in range(N)]
-
-    # Relation state exists only after actual encounters.
     edges: dict[tuple[int, int], float] = {}
     initial_relation_cohort: set[tuple[int, int]] = set()
-    checkpoints: dict[int, set[tuple[int, int]]] = {}
     resource_transfers: dict[tuple[int, int], float] = {}
     survival_series: list[float] = []
     giant_series: list[float] = []
@@ -88,7 +84,7 @@ def run(condition: str, seed: int) -> dict:
             state_series.append(0.0)
             continue
 
-        # Shared local movement opportunity across all conditions.
+        # Shared movement opportunity across every condition.
         for i in alive:
             a = agents[i]
             a.x = min(1.0, max(0.0, a.x + rng.uniform(-0.03, 0.03)))
@@ -97,14 +93,9 @@ def run(condition: str, seed: int) -> dict:
         replenishment = ABUNDANT_REPLENISHMENT if condition == "ABUNDANT_RESOURCE" else BASE_REPLENISHMENT
         for i in alive:
             a = agents[i]
-            # Finite field approximation: equal world-level supply, deliberately below
-            # maximum aggregate consumption in the scarce conditions.
             a.resource = min(RESOURCE_CAPACITY, a.resource + replenishment)
 
         pairs = interaction_pairs(agents)
-
-        # Interaction opportunity is shared. C0 simply freezes relation adaptation;
-        # it does not get a different number of encounters.
         touched: set[tuple[int, int]] = set()
         for i, j in pairs:
             e = (i, j)
@@ -125,66 +116,49 @@ def run(condition: str, seed: int) -> dict:
                     agents[i].resource += transfer
                 resource_transfers[e] = resource_transfers.get(e, 0.0) + transfer
 
-            # State interaction: an encounter provides information. Feedback determines
-            # whether that information can affect future state/relations.
+            # Only conditions with feedback allow interaction outcome to change state.
+            # NO_FEEDBACK still receives the same interaction/resource event, but that
+            # event cannot feed back into future internal state or relation adaptation.
             if condition != "NO_FEEDBACK":
                 if agents[i].resource < agents[j].resource:
                     agents[i].state = agents[j].state
                 elif agents[j].resource < agents[i].resource:
                     agents[j].state = agents[i].state
 
-            if condition == "FULL":
-                if transfer > 0:
-                    edges[e] = min(1.0, old_weight + RELATION_REINFORCE)
-                else:
-                    edges[e] = old_weight
+            if condition == "FULL" and transfer > 0:
+                edges[e] = min(1.0, old_weight + RELATION_REINFORCE)
 
-        # Memory and action dynamics.
         for i in alive:
             a = agents[i]
             impulse = max(0.0, 1.0 - a.resource / RESOURCE_CAPACITY)
             desired = a.state
             if condition != "NO_MEMORY" and a.memory:
-                # Memory changes action tendency without prescribing consensus.
-                if sum(a.memory) / len(a.memory) > 0.5:
+                mean_memory = sum(a.memory) / len(a.memory)
+                if mean_memory > 0.5:
                     desired = 1
-                elif sum(a.memory) / len(a.memory) < 0.5:
+                elif mean_memory < 0.5:
                     desired = 0
             if impulse > 0.75 and rng.random() < 0.5:
                 desired = 1 - desired
             if rng.random() < a.inertia:
                 desired = a.state
             a.state = desired
-            a.memory.append(a.state)
-
+            if condition != "NO_MEMORY":
+                a.memory.append(a.state)
             a.resource -= CONSUMPTION_BASE + 0.015 * impulse
             a.lifetime += 1
             if a.resource <= 0:
                 a.alive = False
 
-        # Relation decay. In C0, C1, C2, C3 relation weights are static/non-adaptive;
-        # FULL alone adapts weights, but no new edge is injected without an encounter.
-        if condition == "FULL":
-            for e in list(edges):
-                if e not in touched:
-                    edges[e] *= (1.0 - RELATION_DECAY)
-                if edges[e] < 0.05:
-                    del edges[e]
-        else:
-            # Relations are encounter records but do not strengthen.
-            for e in list(edges):
-                if e not in touched:
-                    edges[e] *= (1.0 - RELATION_DECAY)
-                if edges[e] < 0.05:
-                    del edges[e]
-
-        if t in (0, 999, 1999, 2999, 3999, 4999):
-            checkpoints[t] = set(edges)
+        for e in list(edges):
+            if e not in touched:
+                edges[e] *= (1.0 - RELATION_DECAY)
+            if edges[e] < 0.05:
+                del edges[e]
 
         alive_now = [i for i, a in enumerate(agents) if a.alive]
         survival_series.append(len(alive_now) / N)
 
-        # Connected components over current relation graph.
         adj = {i: set() for i in alive_now}
         for u, v in edges:
             if u in adj and v in adj:
@@ -209,7 +183,7 @@ def run(condition: str, seed: int) -> dict:
         state_series.append(len(set(states)) / 2 if states else 0.0)
 
     final_edges = set(edges)
-    persistence = len(initial_relation_cohort & final_edges) / max(1, len(initial_relation_cohort))
+    relation_persistence = len(initial_relation_cohort & final_edges) / max(1, len(initial_relation_cohort))
     total_transfer = sum(resource_transfers.values())
     if total_transfer:
         shares = [v / total_transfer for v in resource_transfers.values()]
@@ -223,13 +197,13 @@ def run(condition: str, seed: int) -> dict:
         "final_survival": survival_series[-1],
         "mean_survival": sum(survival_series) / STEPS,
         "mean_persistence_duration": sum(a.lifetime for a in agents) / (N * STEPS),
-        "relation_persistence": persistence,
+        "relation_persistence": relation_persistence,
         "giant_component_fraction": giant_series[-1],
         "mean_giant_component_fraction": sum(giant_series) / STEPS,
         "state_diversity_occupancy": sum(state_series) / STEPS,
         "resource_flow_concentration": flow_concentration,
         "edge_count": len(edges),
-        "mean_degree": (2 * len(edges) / max(1, len([a for a in agents if a.alive]))),
+        "mean_degree": 2 * len(edges) / max(1, len([a for a in agents if a.alive])),
     }
 
 
