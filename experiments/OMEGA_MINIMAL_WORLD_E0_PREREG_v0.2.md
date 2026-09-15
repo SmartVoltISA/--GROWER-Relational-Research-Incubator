@@ -44,7 +44,7 @@ A relation is a record of actual interaction between two agents. No condition ma
 
 ### C0 — RANDOM / STATIC RELATIONS
 
-Interaction opportunities are generated exactly as in FULL, but relation weights do not adapt to interaction outcomes. No memory contribution and no feedback-mediated relation update.
+Interaction opportunities are generated exactly as in FULL. C0 has no memory and no feedback: encounters may transfer resource immediately, but they do not alter future internal state or relation strength.
 
 ### C1 — NO_MEMORY
 
@@ -52,7 +52,7 @@ Same world, movement, resource dynamics, interaction opportunities, and feedback
 
 ### C2 — NO_FEEDBACK
 
-Same world and memory as FULL, but interaction outcomes do not alter future internal state, resource-routing preference, or relation strength.
+Same world and memory as FULL. Interaction outcomes may change immediate resource state, but they cannot alter future internal state or relation strength through a feedback pathway.
 
 ### C3 — ABUNDANT_RESOURCE
 
@@ -78,9 +78,9 @@ Each agent has:
 
 ## Interaction and relation adaptation
 
-At an encounter, agents may exchange information/resource according to the fixed local rule. The outcome updates their state and resource.
+At an encounter, agents may exchange information/resource according to the fixed local rule. The outcome updates their immediate resource state.
 
-In FULL, relation strength may reinforce after beneficial repeated interaction and decay after inactivity or adverse interaction. New relations may appear only through actual encounters. Existing relations may disappear through the same declared decay rule.
+Only FULL permits the interaction outcome to alter future internal state through the feedback pathway and to reinforce relation strength. Relations decay after inactivity. New relations may appear only through actual encounters.
 
 No rule may reference the desired metric values, giant-component size, number of clusters, modularity, or any other organization score.
 
@@ -88,7 +88,7 @@ No rule may reference the desired metric values, giant-component size, number of
 
 1. **Final survival** — fraction alive at the final timestep.
 2. **Mean persistence duration** — mean lifetime of agents normalized by maximum duration.
-3. **Relation persistence** — fraction of relations surviving from defined checkpoint cohorts to the end.
+3. **Relation persistence** — fraction of relations surviving from the **t=999 checkpoint cohort** to the end. If that cohort is empty, the metric is undefined for that run, not zero.
 4. **Giant-component fraction** — fraction of alive agents in the largest connected component.
 5. **State diversity/occupancy** — normalized diversity of internal states over time and at final checkpoint.
 6. **Resource-flow concentration** — concentration (e.g. normalized Herfindahl index) of resource transfers across relations.
@@ -106,7 +106,7 @@ No rule may reference the desired metric values, giant-component size, number of
 
 ## Robustness test
 
-At the final checkpoint, remove 10% of agents using a preregistered random deletion seed derived from the run seed. Recalculate giant-component fraction, surviving resource-flow pathways, and persistence of remaining agents over a fixed recovery window.
+At the final checkpoint, remove 10% of agents using a deterministic deletion seed derived from the run seed. Recalculate giant-component fraction, surviving resource-flow pathways, and persistence of remaining agents over a fixed recovery window. The deletion/recovery procedure is identical across conditions.
 
 ## Decision rule
 
