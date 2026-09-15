@@ -104,11 +104,12 @@ def advance(
     edges: dict[tuple[int, int], float],
     field: list[list[float]],
     rng: random.Random,
-) -> tuple[int, int, float]:
-    """Advance one normal timestep. Returns (interactions, transfers, transferred_amount)."""
+    transfer_ledger: dict[tuple[int, int], float] | None = None,
+) -> int:
+    """Advance one timestep and optionally record actual resource transfers."""
     alive = [i for i, a in enumerate(agents) if a.alive]
     if not alive:
-        return 0, 0, 0.0
+        return 0
 
     for i in alive:
         a = agents[i]
@@ -120,9 +121,6 @@ def advance(
 
     ps = pairs(agents)
     touched: set[tuple[int, int]] = set()
-    transfer_count = 0
-    transfer_amount = 0.0
-
     for i, j in ps:
         e = (i, j)
         touched.add(e)
@@ -137,12 +135,11 @@ def advance(
             else:
                 agents[j].resource -= q
                 agents[i].resource += q
-            transfer_count += 1
-            transfer_amount += q
+            if transfer_ledger is not None:
+                transfer_ledger[e] = transfer_ledger.get(e, 0.0) + q
 
-        # Immediate resource exchange is allowed in every condition.
-        # Only FULL/feedback conditions allow the interaction outcome to
-        # become a future state/relation change.
+        # RANDOM and NO_FEEDBACK receive the immediate resource event, but it
+        # cannot become a future internal-state or relation-strength update.
         if condition not in ("NO_FEEDBACK", "RANDOM"):
             if agents[i].resource < agents[j].resource:
                 agents[i].state = agents[j].state
@@ -156,23 +153,19 @@ def advance(
         a = agents[i]
         impulse = max(0.0, 1.0 - a.resource / CAPACITY)
         desired = a.state
-
         if condition not in ("NO_MEMORY", "RANDOM") and a.memory:
             m = sum(a.memory) / len(a.memory)
             if m > 0.5:
                 desired = 1
             elif m < 0.5:
                 desired = 0
-
         if impulse > 0.75 and rng.random() < 0.5:
             desired = 1 - desired
         if rng.random() < a.inertia:
             desired = a.state
-
         a.state = desired
         if condition not in ("NO_MEMORY", "RANDOM"):
             a.memory.append(a.state)
-
         a.resource -= CONSUMPTION + 0.015 * impulse
         a.lifetime += 1
         if a.resource <= 0:
@@ -183,8 +176,7 @@ def advance(
             edges[e] *= 1.0 - DECAY
         if edges[e] < 0.05:
             del edges[e]
-
-    return len(ps), transfer_count, transfer_amount
+    return len(ps)
 
 
 def robustness_test(
@@ -194,29 +186,35 @@ def robustness_test(
     field: list[list[float]],
     run_seed: int,
 ) -> dict[str, float]:
-    """Delete 10% of agents, then measure recovery for a fixed 100 steps."""
+    """Delete 10% of survivors and run a fixed recovery window."""
     rng = random.Random(run_seed + 424242)
     survivors = [i for i, a in enumerate(agents) if a.alive]
-    delete_count = max(1, round(len(survivors) * ROBUSTNESS_FRACTION))
-    removed = set(rng.sample(survivors, min(delete_count, len(survivors))))
+    original_alive = len(survivors)
+    if not survivors:
+        return {
+            "deleted_fraction": 0.0,
+            "giant_component_before_recovery": 0.0,
+            "giant_component_after_recovery": 0.0,
+            "survival_after_recovery": 0.0,
+        }
 
+    delete_count = max(1, round(original_alive * ROBUSTNESS_FRACTION))
+    removed = set(rng.sample(survivors, min(delete_count, original_alive)))
     for i in removed:
         agents[i].alive = False
-
     edges = {e: w for e, w in edges.items() if e[0] not in removed and e[1] not in removed}
-    pre = component_fraction(agents, edges)
-    pre_alive = sum(a.alive for a in agents)
 
+    before = component_fraction(agents, edges)
     for _ in range(RECOVERY_STEPS):
         advance(condition, agents, edges, field, rng)
+    after = component_fraction(agents, edges)
+    alive_after = sum(a.alive for a in agents)
 
-    post = component_fraction(agents, edges)
-    post_alive = sum(a.alive for a in agents)
     return {
-        "deleted_fraction": len(removed) / max(1, pre_alive + len(removed)),
-        "giant_component_before_recovery": pre,
-        "giant_component_after_recovery": post,
-        "survival_after_recovery": post_alive / N,
+        "deleted_fraction": len(removed) / original_alive,
+        "giant_component_before_recovery": before,
+        "giant_component_after_recovery": after,
+        "survival_after_recovery": alive_after / N,
     }
 
 
@@ -233,13 +231,7 @@ def run(condition: str, seed: int) -> dict[str, float | int | str]:
     interactions: list[int] = []
 
     for t in range(STEPS):
-        interaction_count, _, _ = advance(condition, agents, edges, field, rng)
-        interactions.append(interaction_count)
-
-        # Reconstruct transfer concentration from current interactions is not possible
-        # after advance, so the actual transfer ledger is maintained by a deterministic
-        # second pass over the touched relation weights. Relation concentration is
-        # therefore calculated from final relation weights as a declared proxy.
+        interactions.append(advance(condition, agents, edges, field, rng, transfers))
         if t == 999:
             checkpoint_edges = set(edges)
 
@@ -255,16 +247,19 @@ def run(condition: str, seed: int) -> dict[str, float | int | str]:
         else float("nan")
     )
 
-    total_weight = sum(edges.values())
-    if total_weight > 0:
-        shares = [w / total_weight for w in edges.values()]
+    total_transfer = sum(transfers.values())
+    if total_transfer:
+        shares = [v / total_transfer for v in transfers.values()]
         flow_concentration = sum(s * s for s in shares)
     else:
         flow_concentration = 0.0
 
-    # Robustness must start from a copy of the final state so the main run remains intact.
     robust_agents = [
-        Agent(a.x, a.y, a.resource, a.state, deque(a.memory, maxlen=MEMORY_LENGTH), a.inertia, a.alive, a.lifetime)
+        Agent(
+            a.x, a.y, a.resource, a.state,
+            deque(a.memory, maxlen=MEMORY_LENGTH),
+            a.inertia, a.alive, a.lifetime,
+        )
         for a in agents
     ]
     robust = robustness_test(condition, robust_agents, dict(edges), field, seed)
