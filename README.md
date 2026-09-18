@@ -13,7 +13,7 @@ EN: An incubator that grows verifiable structures from relations through hypothe
 ## Controlled growth
 Growth is deliberately bounded. Each cycle declares its goal, invariants, structural and behavioral limits, safety limits, resource limits, evidence requirements and exit criteria. Candidates may explore inside this space, but cannot redefine the boundary and then use that new boundary to justify promotion.
 
-Boundary changes are separate hypotheses and require independent testing plus Human Gate approval. Protected SPACE invariants include identity, cognition/authority separation, Guardian authority, no self-replication or authority escalation, canonical SPACE immutability, traceable branches, evidence-backed promotion and human stop/reject/redirect authority.
+Boundary changes are separate hypotheses and require independent testing plus explicit external OperatorAuthority authorization. A boolean approval flag is not an authority token. Protected SPACE invariants include identity, cognition/authority separation, Guardian authority, no self-replication or authority escalation, canonical SPACE immutability, traceable branches, evidence-backed promotion and human stop/reject/redirect authority.
 
 The first controlled target is **SPACE-PRODUCT**: compare the manually designed baseline against a GROWER-grown candidate under the same declared test conditions. This is a controlled-growth experiment, not an AGI claim.
 
@@ -26,7 +26,7 @@ The first controlled target is **SPACE-PRODUCT**: compare the manually designed 
 - **MEMORY** — stores provenance, failed branches, successful evidence and reusable anchors.
 - **ASSEMBLER** — combines only admissible, verified components into a new artifact.
 - **PROMOTION GATE** — candidate → implemented → verified → independently reused → project-independent → foundational.
-- **HUMAN GATE** — the human can reject, stop, or redirect any growth cycle.
+- **HUMAN GATE** — the human can reject, stop, or redirect any growth cycle; protected boundary changes require the separate external OperatorAuthority path.
 - **GUARDIAN BOUNDARY** — no self-replication, uncontrolled cloning, or write-back into protected Core.
 
 ## Status semantics
