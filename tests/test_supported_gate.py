@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
+from boundary_gate import evaluate as evaluate_boundary
 from grower_core import GrowthCycle, Hypothesis, Relation, Status
 
 
@@ -26,7 +27,7 @@ def test_supported_requires_evaluated_evidence_and_boundary():
         "controls_pass": True, "falsification_attempted": True,
         "uncertainty_reported": True,
     }
-    assert c.record_test_result(record, boundary_status="ADMISSIBLE") == "SUPPORTED"
+    assert c.record_test_result(record, boundary_status=evaluate_boundary({"falsification_attempted": True, "controls_pass": True, "uncertainty_reported": True})) == "SUPPORTED"
     c.decide(Status.SUPPORTED, "evaluated evidence and boundary passed")
     assert c.status is Status.SUPPORTED
 
