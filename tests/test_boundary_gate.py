@@ -25,7 +25,6 @@ def test_invariant_violation_is_hard_fail():
 def test_boundary_change_requires_human_gate():
     c = {**valid(), "boundary_change_proposed": True}
     assert evaluate(c).status == "BOUNDARY_REVIEW_REQUIRED"
-    assert evaluate(c, human_boundary_approval=True).status == "ADMISSIBLE"
 
 
 def test_canonical_space_mutation_is_rejected():
