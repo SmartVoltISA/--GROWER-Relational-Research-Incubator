@@ -10,14 +10,14 @@ def test_assembly_without_certificate_is_blocked():
     else: raise AssertionError("assembly accepted without certificate")
 
 def test_forged_certificate_issuer_is_blocked():
-    cert=VerificationCertificate("CYCLE", "E", object())
+    cert=VerificationCertificate("CYCLE", "E", "fp", object())
     try: assemble([Component("C", Status.SUPPORTED, ("E",), "x", certificate=cert)], "T")
     except PermissionError: pass
     else: raise AssertionError("forged certificate was accepted")
 
 def test_certificate_evidence_must_match_component():
     from assembler import _CERTIFICATE_ISSUER
-    cert=VerificationCertificate("CYCLE", "OTHER", _CERTIFICATE_ISSUER)
+    cert=VerificationCertificate("CYCLE", "OTHER", "fp", _CERTIFICATE_ISSUER)
     try: assemble([Component("C", Status.SUPPORTED, ("E",), "x", certificate=cert)], "T")
     except PermissionError: pass
     else: raise AssertionError("certificate evidence mismatch was accepted")
