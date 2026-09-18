@@ -26,6 +26,7 @@ def test_supported_requires_evaluated_evidence_and_boundary():
         "prediction_error": 1.0, "null_error": 2.0,
         "controls_pass": True, "falsification_attempted": True,
         "uncertainty_reported": True,
+        "evidence_id": "E-SUPPORTED",
     }
     assert c.record_test_result(record, boundary_status=evaluate_boundary({"falsification_attempted": True, "controls_pass": True, "uncertainty_reported": True})) == "SUPPORTED"
     c.decide(Status.SUPPORTED, "evaluated evidence and boundary passed")
