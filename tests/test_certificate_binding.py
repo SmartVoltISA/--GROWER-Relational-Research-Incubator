@@ -5,7 +5,7 @@ from assembler import Component, VerificationCertificate, assemble, _CERTIFICATE
 from grower_core import Status
 
 def test_certificate_cycle_mismatch_blocked():
-    cert=VerificationCertificate("CYCLE-A","E",_CERTIFICATE_ISSUER)
+    cert=VerificationCertificate("CYCLE-A","E","fp",_CERTIFICATE_ISSUER)
     try:
         assemble([Component("C",Status.SUPPORTED,("E",),"math",certificate=cert,cycle_id="CYCLE-B")],"T")
     except PermissionError:
