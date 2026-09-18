@@ -54,6 +54,8 @@ def assemble(components: list[Component], target: str) -> dict:
             raise ValueError("every component requires a verified certificate")
         if c.certificate._issuer is not _CERTIFICATE_ISSUER:
             raise PermissionError("invalid certificate")
+        if not c.cycle_id or c.certificate.cycle_id != c.cycle_id:
+            raise PermissionError("certificate is not bound to component cycle")
         if c.certificate.evidence_id not in c.evidence_ids:
             raise PermissionError("certificate evidence is not bound to component")
     return {
