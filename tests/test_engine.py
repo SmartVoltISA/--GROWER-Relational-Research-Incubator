@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
+from boundary_gate import evaluate as evaluate_boundary
 from grower_core import Status
 from growth_engine import Branch, select_next, should_stop
 from assembler import Component, assemble, issue_certificate
@@ -39,7 +40,7 @@ def test_assembler_accepts_supported_components():
         "prediction_error": 1.0, "null_error": 2.0,
         "controls_pass": True, "falsification_attempted": True,
         "uncertainty_reported": True, "evidence_id": "E1",
-    }, boundary_status="ADMISSIBLE")
+    }, boundary_status=evaluate_boundary({"falsification_attempted": True, "controls_pass": True, "uncertainty_reported": True}))
     cycle.decide(Status.SUPPORTED, "gated evidence")
     cert = issue_certificate(cycle, "E1")
     result = assemble([Component("C1", Status.SUPPORTED, ("E1",), "math", ("A",), cert)], "target")
