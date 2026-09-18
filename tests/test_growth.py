@@ -15,6 +15,14 @@ def test_growth_creates_competing_directions():
     assert cs[1].hypothesis.null_hypothesis
 
 
+def test_archive_rejects_active_branch():
+    try:
+        archive_branch(BranchRecord("B-ACTIVE", None, "TESTING", "still running"), [])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("active branch was archived")
+
 def test_archive_preserves_failed_branch():
     archive = []
     record = BranchRecord("B-1", None, "FAIL", "counterexample", ("E-1",))
