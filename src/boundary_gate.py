@@ -1,12 +1,13 @@
 """Hard growth boundary for Ω-GROWER.
 
-The gate separates search freedom from authority. Candidates may change
-inside the declared boundary, but a candidate cannot change that boundary
-and then use the new boundary to justify its own promotion.
+Protected boundary changes require an external, target-bound one-shot
+OperatorAuthority authorization. A boolean approval flag is deliberately
+not accepted.
 """
 from dataclasses import dataclass
 from typing import Any
 
+from operator_authority import OperatorAuthority, SurgeryAuthorization, SurgeryRequest, ProtectedTarget
 
 @dataclass(frozen=True)
 class BoundaryDecision:
@@ -14,22 +15,20 @@ class BoundaryDecision:
     reasons: tuple[str, ...]
     boundary_change_proposed: bool = False
 
-
 PROTECTED_INVARIANTS = (
-    "identity",
-    "cognition_authority",
-    "guardian_authority",
-    "no_self_replication",
-    "no_authority_escalation",
-    "canonical_space_immutable",
-    "traceable_branches",
-    "evidence_required",
-    "human_gate",
+    "identity", "cognition_authority", "guardian_authority",
+    "no_self_replication", "no_authority_escalation",
+    "canonical_space_immutable", "traceable_branches",
+    "evidence_required", "human_gate",
 )
 
-
-def evaluate(candidate: dict[str, Any], *, human_boundary_approval: bool = False) -> BoundaryDecision:
-    """Evaluate admissibility without auto-promoting the candidate."""
+def evaluate(
+    candidate: dict[str, Any],
+    *,
+    operator_authority: OperatorAuthority | None = None,
+    operator_authorization: SurgeryAuthorization | None = None,
+    surgery_request: SurgeryRequest | None = None,
+) -> BoundaryDecision:
     reasons: list[str] = []
     violations = set(candidate.get("invariant_violations", ()))
     violations.update(candidate.get("boundary_violations", ()))
@@ -46,12 +45,19 @@ def evaluate(candidate: dict[str, Any], *, human_boundary_approval: bool = False
         return BoundaryDecision("FAIL", tuple(reasons), bool(candidate.get("boundary_change_proposed", False)))
 
     boundary_change = bool(candidate.get("boundary_change_proposed", False))
-    if boundary_change and not human_boundary_approval:
-        return BoundaryDecision(
-            "BOUNDARY_REVIEW_REQUIRED",
-            ("candidate proposes a boundary change; Human Gate approval is required",),
-            True,
-        )
+    if boundary_change:
+        if not (operator_authority and operator_authorization and surgery_request):
+            return BoundaryDecision(
+                "BOUNDARY_REVIEW_REQUIRED",
+                ("protected boundary change requires external OperatorAuthority authorization",),
+                True,
+            )
+        if surgery_request.target is not ProtectedTarget.GROWTH_BOUNDARY:
+            return BoundaryDecision("FAIL", ("authorization target is not GROWTH_BOUNDARY",), True)
+        try:
+            operator_authority.consume(operator_authorization, surgery_request)
+        except PermissionError as exc:
+            return BoundaryDecision("FAIL", (str(exc),), True)
 
     if not candidate.get("falsification_attempted", False):
         return BoundaryDecision("NOT_PROVEN", ("falsification has not been attempted",), boundary_change)
