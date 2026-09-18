@@ -1,77 +1,54 @@
-"""Hermetic A/B/C capability-growth experiment.
-
-A baseline, B grown mechanism, and C negative control receive the same
-training/test data. The task is deliberately small: infer a relation mapping
-from training pairs and apply it to held-out contexts.
-
-This is a benchmark of the growth pathway, not an AGI test.
-"""
+"""Corrected hermetic A/B/C capability-growth experiment."""
 from dataclasses import dataclass
-import hashlib
-import json
+import hashlib, json
 
-TRAIN = (
-    ("red", "opposite", "blue", "cool"),
-    ("square", "opposite", "circle", "round"),
-    ("high", "opposite", "low", "low"),
+TRAIN=((2,3,5),(4,6,10),(7,8,15))
+TEST=((10,11,21),(12,5,17),(20,4,24))
+ADVERSARIAL=((9,1,10),(3,14,17))
+GRAMMAR=(
+ ("ADD",lambda a,b:a+b),("SUB",lambda a,b:a-b),
+ ("REV_SUB",lambda a,b:b-a),("COPY_A",lambda a,b:a),
+ ("COPY_B",lambda a,b:b),
 )
-TEST = (
-    ("warm", "opposite", "cold", "cool"),
-    ("triangle", "opposite", "ring", "round"),
-    ("up", "opposite", "down", "low"),
-)
-TRANSFER = ("new-context", "opposite", "new-pair", "cool")
 
 @dataclass(frozen=True)
 class Score:
-    correct: int
-    total: int
+    correct:int
+    total:int
     @property
-    def accuracy(self): return self.correct / self.total
+    def accuracy(self): return self.correct/self.total if self.total else 0.0
 
 class Baseline:
-    def __init__(self): self.memory=[]
-    def observe(self, sample): self.memory.append(sample)
-    def predict(self, sample): return None
-
-class Grown:
-    def __init__(self): self.rules={}
-    def observe(self, sample):
-        a, relation, _b, target = sample
-        self.rules[(a, relation)] = target
-    def predict(self, sample):
-        a, relation, _b, _target = sample
-        # Declared relational mechanism: relation-specific target rule.
-        if relation != "opposite": return None
-        if not self.rules: return None
-        # Generalization uses the observed target vocabulary majority for the relation.
-        targets=[v for (k,r),v in self.rules.items() if r==relation]
-        return max(sorted(set(targets)), key=lambda x: (targets.count(x), x))
+    def predict(self,sample): return None
 
 class NegativeControl:
-    def predict(self, sample): return None
+    def predict(self,sample): return None
 
-def digest(data):
-    return hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",",":")).encode()).hexdigest()
+class Grown:
+    def __init__(self,grammar=GRAMMAR): self.grammar=grammar; self.selected=None
+    def fit(self,train):
+        scored=[]
+        for i,(name,rule) in enumerate(self.grammar):
+            correct=sum(rule(a,b)==y for a,b,y in train)
+            scored.append((correct,-i,name,rule))
+        correct,_i,name,rule=max(scored)
+        self.selected=(name,rule) if correct else None
+    def predict(self,sample):
+        if self.selected is None:return None
+        a,b,_=sample
+        return self.selected[1](a,b)
 
-def evaluate(model, data):
-    correct=sum(model.predict(x)==x[3] for x in data)
-    return Score(correct,len(data))
+def score(model,data): return Score(sum(model.predict(x)==x[2] for x in data),len(data))
+def digest(data): return hashlib.sha256(json.dumps(data,sort_keys=True,separators=(",",":")).encode()).hexdigest()
 
 def run():
-    baseline, grown, control = Baseline(), Grown(), NegativeControl()
-    for x in TRAIN:
-        baseline.observe(x); grown.observe(x)
-    scores={"baseline":evaluate(baseline,TEST),"grown":evaluate(grown,TEST),"negative_control":evaluate(control,TEST)}
-    transfer_pass=grown.predict(TRANSFER)==TRANSFER[3]
-    manifest={"train":TRAIN,"test":TEST,"transfer":TRANSFER}
-    return {
-        "data_fingerprint":digest(manifest),
-        "scores":{k:{"correct":v.correct,"total":v.total,"accuracy":v.accuracy} for k,v in scores.items()},
-        "transfer_pass":transfer_pass,
-        "invariant_violations":0,
-        "resource_budget":"fixed",
-    }
+    baseline,grown,control=Baseline(),Grown(),NegativeControl()
+    grown.fit(TRAIN)
+    results={"baseline":score(baseline,TEST),"grown":score(grown,TEST),
+             "negative_control":score(control,TEST),"grown_adversarial":score(grown,ADVERSARIAL)}
+    return {"data_fingerprint":digest({"train":TRAIN,"test":TEST,"adversarial":ADVERSARIAL,"grammar":[n for n,_ in GRAMMAR]}),
+            "selected_rule":grown.selected[0] if grown.selected else None,
+            "scores":{k:{"correct":v.correct,"total":v.total,"accuracy":v.accuracy} for k,v in results.items()},
+            "invariant_violations":0,"resource_budget":"fixed"}
 
-if __name__=="__main__":
-    print(json.dumps(run(),sort_keys=True))
+if __name__=="__main__": print(json.dumps(run(),sort_keys=True))
