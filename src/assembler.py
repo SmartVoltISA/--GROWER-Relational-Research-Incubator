@@ -6,6 +6,8 @@ central evidence and boundary gates have produced SUPPORTED/ADMISSIBLE.
 from dataclasses import dataclass
 from grower_core import GrowthCycle, Status
 
+_CERTIFICATE_ISSUER = object()
+
 
 @dataclass(frozen=True)
 class VerificationCertificate:
@@ -35,11 +37,7 @@ def issue_certificate(cycle: GrowthCycle, evidence_id: str) -> VerificationCerti
     ]
     if not any(evidence_id == e.get("evidence_id") for e in matches):
         raise PermissionError("certificate evidence is not a supported gated result")
-    issuer = getattr(cycle, "_certificate_issuer", None)
-    if issuer is None:
-        issuer = object()
-        setattr(cycle, "_certificate_issuer", issuer)
-    return VerificationCertificate(cycle.cycle_id, evidence_id, issuer)
+    return VerificationCertificate(cycle.cycle_id, evidence_id, _CERTIFICATE_ISSUER)
 
 
 def assemble(components: list[Component], target: str) -> dict:
@@ -52,7 +50,7 @@ def assemble(components: list[Component], target: str) -> dict:
             raise ValueError(f"only SUPPORTED components may be assembled: {c.component_id}")
         if not c.evidence_ids or c.certificate is None:
             raise ValueError("every component requires a verified certificate")
-        if c.certificate._issuer is not getattr(c.certificate, "_issuer", None):
+        if c.certificate._issuer is not _CERTIFICATE_ISSUER:
             raise PermissionError("invalid certificate")
         if c.certificate.evidence_id not in c.evidence_ids:
             raise PermissionError("certificate evidence is not bound to component")
