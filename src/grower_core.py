@@ -25,6 +25,7 @@ class GrowthCycle:
     hypotheses:list[Hypothesis]=field(default_factory=list); evidence:list[dict[str,Any]]=field(default_factory=list)
     status:Status=Status.CANDIDATE
     _evidence_issuer:object=field(default_factory=object,init=False,repr=False)
+    _locked_fingerprint:str|None=field(default=None,init=False,repr=False)
 
     def __setattr__(self,name:str,value:Any)->None:
         if name=="status" and hasattr(self,"status"): raise AttributeError("status is controlled by GrowthCycle transitions")
@@ -39,7 +40,13 @@ class GrowthCycle:
         if not self.relations: raise ValueError("at least one relation is required")
         if len(self.hypotheses)<2: raise ValueError("at least two competing hypotheses are required")
         if any(not h.null_hypothesis.strip() for h in self.hypotheses): raise ValueError("every hypothesis requires a null hypothesis")
+        locked={"cycle_id":self.cycle_id,"goal":self.goal,"relations":[r.__dict__ for r in self.relations],"hypotheses":[h.__dict__ for h in self.hypotheses]}
+        object.__setattr__(self,"_locked_fingerprint",hashlib.sha256(json.dumps(locked,sort_keys=True,default=str,separators=(",",":")).encode()).hexdigest())
         self._set_status(Status.TESTING)
+    def _inputs_unchanged(self)->bool:
+        locked={"cycle_id":self.cycle_id,"goal":self.goal,"relations":[r.__dict__ for r in self.relations],"hypotheses":[h.__dict__ for h in self.hypotheses]}
+        current=hashlib.sha256(json.dumps(locked,sort_keys=True,default=str,separators=(",",":")).encode()).hexdigest()
+        return current==self._locked_fingerprint
     def record_evidence(self,record:dict[str,Any])->None:
         if self.status not in {Status.TESTING,Status.PARTIAL,Status.NOT_PROVEN}: raise ValueError(f"cannot add evidence in state {self.status}")
         if record.get("type")=="test_result": raise PermissionError("test results must enter through record_test_result")
@@ -60,6 +67,7 @@ class GrowthCycle:
         if self.status in {Status.SUPPORTED,Status.FAIL,Status.INVALID,Status.ARCHIVED}: raise ValueError(f"terminal cycle cannot transition from {self.status}")
         if not reason.strip(): raise ValueError("decision reason is required")
         if status is Status.SUPPORTED:
+            if not self._inputs_unchanged(): raise PermissionError("locked cycle inputs were modified")
             supported=any(e.get("type")=="test_result" and e.get("evidence_status")=="SUPPORTED" and e.get("boundary_status")=="ADMISSIBLE" and e.get("_cycle_id")==self.cycle_id and e.get("_evidence_issuer") is self._evidence_issuer and e.get("_fingerprint")==hashlib.sha256(json.dumps({k:v for k,v in e.items() if k not in {'_evidence_issuer','_fingerprint'}}, sort_keys=True, default=str, separators=(',', ':')).encode()).hexdigest() and evaluate_evidence(e)=="SUPPORTED" for e in self.evidence)
             if not supported: raise PermissionError("SUPPORTED requires a centrally evaluated evidence result and ADMISSIBLE boundary")
         self.evidence.append({"type":"decision","status":status.value,"reason":reason}); self._set_status(status)
