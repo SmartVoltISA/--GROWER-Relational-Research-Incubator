@@ -59,3 +59,5 @@ class GrowthCycle:
             supported=any(e.get("type")=="test_result" and e.get("evidence_status")=="SUPPORTED" and e.get("boundary_status")=="ADMISSIBLE" and e.get("_cycle_id")==self.cycle_id and e.get("_evidence_issuer") is self._evidence_issuer for e in self.evidence)
             if not supported: raise PermissionError("SUPPORTED requires a centrally evaluated evidence result and ADMISSIBLE boundary")
         self.evidence.append({"type":"decision","status":status.value,"reason":reason}); self._set_status(status)
+
+# Evidence mutation hardening review: see security tests.
