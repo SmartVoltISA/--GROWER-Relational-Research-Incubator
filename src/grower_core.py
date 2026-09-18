@@ -54,6 +54,7 @@ class GrowthCycle:
     def record_test_result(self,record:dict[str,Any],*,boundary_status:BoundaryDecision)->str:
         if self.status not in {Status.TESTING,Status.PARTIAL,Status.NOT_PROVEN}: raise ValueError(f"cannot record test result in state {self.status}")
         if not isinstance(record.get("evidence_id"),str) or not record["evidence_id"].strip(): raise ValueError("evidence_id is required for test results")
+        if any(e.get("evidence_id") == record["evidence_id"] for e in self.evidence if e.get("type") == "test_result"): raise ValueError(f"duplicate evidence_id in cycle: {record['evidence_id']}")
         if not isinstance(boundary_status,BoundaryDecision): raise TypeError("record_test_result requires a BoundaryDecision from boundary_gate")
         if boundary_status._issuer is not _BOUNDARY_DECISION_ISSUER: raise PermissionError("untrusted boundary decision")
         evidence_status=evaluate_evidence(record)
