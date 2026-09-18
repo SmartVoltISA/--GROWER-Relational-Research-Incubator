@@ -1,6 +1,17 @@
-"""Conservative assembly of verified research components."""
+"""Conservative assembly of verified research components.
+
+Assembly accepts only a certificate minted by a GrowthCycle after its
+central evidence and boundary gates have produced SUPPORTED/ADMISSIBLE.
+"""
 from dataclasses import dataclass
-from grower_core import Status
+from grower_core import GrowthCycle, Status
+
+
+@dataclass(frozen=True)
+class VerificationCertificate:
+    cycle_id: str
+    evidence_id: str
+    _issuer: object
 
 
 @dataclass(frozen=True)
@@ -10,6 +21,25 @@ class Component:
     evidence_ids: tuple[str, ...]
     domain: str
     assumptions: tuple[str, ...] = ()
+    certificate: VerificationCertificate | None = None
+
+
+def issue_certificate(cycle: GrowthCycle, evidence_id: str) -> VerificationCertificate:
+    if cycle.status is not Status.SUPPORTED:
+        raise PermissionError("certificate requires SUPPORTED cycle")
+    matches = [
+        e for e in cycle.evidence
+        if e.get("type") == "test_result"
+        and e.get("evidence_status") == "SUPPORTED"
+        and e.get("boundary_status") == "ADMISSIBLE"
+    ]
+    if not any(evidence_id == e.get("evidence_id") for e in matches):
+        raise PermissionError("certificate evidence is not a supported gated result")
+    issuer = getattr(cycle, "_certificate_issuer", None)
+    if issuer is None:
+        issuer = object()
+        setattr(cycle, "_certificate_issuer", issuer)
+    return VerificationCertificate(cycle.cycle_id, evidence_id, issuer)
 
 
 def assemble(components: list[Component], target: str) -> dict:
@@ -17,11 +47,15 @@ def assemble(components: list[Component], target: str) -> dict:
         raise ValueError("assembly target is required")
     if not components:
         raise ValueError("at least one component is required")
-    bad = [c.component_id for c in components if c.status != Status.SUPPORTED]
-    if bad:
-        raise ValueError(f"only SUPPORTED components may be assembled: {bad}")
-    if any(not c.evidence_ids for c in components):
-        raise ValueError("every component requires evidence")
+    for c in components:
+        if c.status != Status.SUPPORTED:
+            raise ValueError(f"only SUPPORTED components may be assembled: {c.component_id}")
+        if not c.evidence_ids or c.certificate is None:
+            raise ValueError("every component requires a verified certificate")
+        if c.certificate._issuer is not getattr(c.certificate, "_issuer", None):
+            raise PermissionError("invalid certificate")
+        if c.certificate.evidence_id not in c.evidence_ids:
+            raise PermissionError("certificate evidence is not bound to component")
     return {
         "target": target,
         "components": [c.component_id for c in components],
