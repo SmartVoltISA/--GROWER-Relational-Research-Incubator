@@ -67,6 +67,10 @@ def assemble(components: list[Component], target: str) -> dict:
             raise PermissionError("certificate is not bound to component cycle")
         if c.certificate.evidence_id not in c.evidence_ids:
             raise PermissionError("certificate evidence is not bound to component")
+        if any(not isinstance(e, str) or not e.strip() for e in c.evidence_ids):
+            raise ValueError("component evidence IDs must be non-empty strings")
+        if len(set(c.evidence_ids)) != len(c.evidence_ids):
+            raise ValueError("component evidence IDs must be unique")
         if not c.certificate.evidence_fingerprint.strip():
             raise PermissionError("certificate evidence fingerprint is required")
     return {
