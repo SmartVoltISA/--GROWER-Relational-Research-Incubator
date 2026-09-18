@@ -47,7 +47,9 @@ def grow_space(parent: str = "SPACE-PRODUCT-baseline") -> SpaceCandidate:
         "canonical_space_immutable", "traceable_branches",
         "evidence_required", "human_gate",
     )
-    seed = parent + "|" + "|".join(":" .join(r) for r in relations)
+    canonical = {"parent": parent, "goal": "grow controlled SPACE from relational architecture", "organs": organs, "support_nodes": support_nodes, "relations": relations, "invariants": invariants}
+    import json
+    seed = json.dumps(canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     candidate_id = "SPACE-CANDIDATE-" + sha256(seed.encode()).hexdigest()[:12]
     decision = evaluate({
         "falsification_attempted": False,
