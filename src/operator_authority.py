@@ -41,9 +41,20 @@ class OperatorAuthority:
         self._tokens: dict[str, SurgeryAuthorization] = {}
 
     def authorize(self, request: SurgeryRequest, external_proof: str) -> SurgeryAuthorization:
+        if not isinstance(request, SurgeryRequest):
+            raise TypeError("authorize requires a SurgeryRequest")
+        for value, label in ((request.change_id, "change_id"), (request.operator_id, "operator_id"), (request.request_id, "request_id")):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{label} is required")
+        if not isinstance(external_proof, str) or not external_proof.strip():
+            raise PermissionError("external operator proof is required")
         if not request.confirmed:
             raise PermissionError("explicit operator confirmation is required")
-        if not self._verify(external_proof, request):
+        try:
+            verified = self._verify(external_proof, request)
+        except Exception as exc:
+            raise PermissionError("operator proof verification failed") from exc
+        if verified is not True:
             raise PermissionError("operator proof rejected")
         self._counter += 1
         token = SurgeryAuthorization(
