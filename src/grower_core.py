@@ -1,12 +1,9 @@
-"""Minimal deterministic Ω-GROWER state core.
-
-This module intentionally does not contain a domain solver. It manages
-research lineage, hypotheses, evidence and conservative promotion.
-"""
-
+"""Minimal deterministic Ω-GROWER state core."""
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+from evidence_gate import evaluate as evaluate_evidence
 
 
 class Status(str, Enum):
@@ -68,11 +65,32 @@ class GrowthCycle:
             raise ValueError(f"cannot add evidence in state {self.status}")
         self.evidence.append(dict(record))
 
+    def record_test_result(self, record: dict[str, Any], *, boundary_status: str = "UNKNOWN") -> str:
+        """Evaluate evidence centrally before any SUPPORTED decision."""
+        evidence_status = evaluate_evidence(record)
+        entry = dict(record)
+        entry.update({
+            "type": "test_result",
+            "evidence_status": evidence_status,
+            "boundary_status": boundary_status,
+        })
+        self.record_evidence(entry)
+        return evidence_status
+
     def decide(self, status: Status, reason: str) -> None:
         allowed = {Status.SUPPORTED, Status.PARTIAL, Status.NOT_PROVEN, Status.FAIL, Status.INVALID, Status.ARCHIVED}
         if status not in allowed:
             raise ValueError(f"invalid terminal decision: {status}")
         if not reason.strip():
             raise ValueError("decision reason is required")
+        if status is Status.SUPPORTED:
+            supported = any(
+                e.get("type") == "test_result"
+                and e.get("evidence_status") == "SUPPORTED"
+                and e.get("boundary_status") == "ADMISSIBLE"
+                for e in self.evidence
+            )
+            if not supported:
+                raise PermissionError("SUPPORTED requires a centrally evaluated evidence result and ADMISSIBLE boundary")
         self.evidence.append({"type": "decision", "status": status.value, "reason": reason})
         self.status = status
