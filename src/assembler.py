@@ -4,6 +4,8 @@ Assembly accepts only a certificate minted by a GrowthCycle after its
 central evidence and boundary gates have produced SUPPORTED/ADMISSIBLE.
 """
 from dataclasses import dataclass
+import hashlib
+import json
 from grower_core import GrowthCycle, Status
 
 _CERTIFICATE_ISSUER = object()
@@ -13,6 +15,7 @@ _CERTIFICATE_ISSUER = object()
 class VerificationCertificate:
     cycle_id: str
     evidence_id: str
+    evidence_fingerprint: str
     _issuer: object
 
 
@@ -24,6 +27,7 @@ class Component:
     domain: str
     assumptions: tuple[str, ...] = ()
     certificate: VerificationCertificate | None = None
+    cycle_id: str | None = None
 
 
 def issue_certificate(cycle: GrowthCycle, evidence_id: str) -> VerificationCertificate:
@@ -37,9 +41,14 @@ def issue_certificate(cycle: GrowthCycle, evidence_id: str) -> VerificationCerti
         and e.get("_cycle_id") == cycle.cycle_id
         and e.get("_evidence_issuer") is cycle._evidence_issuer
     ]
-    if not any(evidence_id == e.get("evidence_id") for e in matches):
+    matches = [e for e in matches if e.get("_fingerprint") == hashlib.sha256(
+        json.dumps({k:v for k,v in e.items() if k not in {"_evidence_issuer","_fingerprint"}},
+                   sort_keys=True, default=str, separators=(",", ":")).encode()
+    ).hexdigest()]
+    match = next((e for e in matches if evidence_id == e.get("evidence_id")), None)
+    if match is None:
         raise PermissionError("certificate evidence is not a supported gated result")
-    return VerificationCertificate(cycle.cycle_id, evidence_id, _CERTIFICATE_ISSUER)
+    return VerificationCertificate(cycle.cycle_id, evidence_id, match["_fingerprint"], _CERTIFICATE_ISSUER)
 
 
 def assemble(components: list[Component], target: str) -> dict:
@@ -58,6 +67,8 @@ def assemble(components: list[Component], target: str) -> dict:
             raise PermissionError("certificate is not bound to component cycle")
         if c.certificate.evidence_id not in c.evidence_ids:
             raise PermissionError("certificate evidence is not bound to component")
+        if not c.certificate.evidence_fingerprint.strip():
+            raise PermissionError("certificate evidence fingerprint is required")
     return {
         "target": target,
         "components": [c.component_id for c in components],
