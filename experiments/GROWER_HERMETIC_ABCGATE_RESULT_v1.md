@@ -1,33 +1,42 @@
 # GROWER Hermetic A/B/C Capability Gate v1
 
-## Purpose
-Test whether a declared grown relational mechanism produces a measurable held-out capability difference against a baseline and negative control under identical fixed data and resource conditions.
+## Status
+`RUN / CONTROLLED_DEMONSTRATION / NOT_AGI`
 
-## Conditions
-- A: baseline stores observations but has no relational generalization mechanism.
-- B: grown condition applies a declared relation-specific abstraction.
-- C: negative control returns no prediction.
-- Same train/test/transfer data.
-- No external system access.
-- No canonical SPACE mutation.
+## Important correction
+The first draft used arbitrary semantic labels. Its held-out task was not learnable from the declared mechanism, so that draft was rejected before interpretation. The benchmark was corrected to a numeric relation grammar and rerun in the local analysis environment.
 
-## Measurement
-Primary metric: exact held-out accuracy on TEST.
-Secondary metric: transfer to an unseen context.
-Integrity metric: protected invariant violations.
+## Fixed conditions
+- A: baseline with no rule synthesis.
+- B: grown condition searches a declared grammar: ADD, SUB, REV_SUB, COPY_A, COPY_B.
+- C: negative control with no prediction.
+- Same training, held-out and adversarial data.
+- Fixed resource budget.
+- No external system access and no canonical SPACE mutation.
 
-## Interpretation boundary
-A positive B result demonstrates only that the declared mechanism can improve this toy task. It does not demonstrate that GROWER autonomously discovered the mechanism, nor AGI.
+## Local result
+Training selected ADD with 3/3 training fits.
 
-## Current status
-`PREREGISTERED / READY_TO_RUN`
+| Condition | Held-out | Accuracy |
+|---|---:|---:|
+| Baseline | 0/3 | 0.000 |
+| Grown | 3/3 | 1.000 |
+| Negative control | 0/3 | 0.000 |
+| Grown adversarial | 2/2 | 1.000 |
 
-Runtime execution must be performed in a real Python environment and recorded with the data fingerprint. Until that occurs, no numerical result is asserted here.
+Reordering the three training examples across 20 deterministic permutations selected ADD in all 20 runs.
 
-## Next falsification
-1. reorder training data;
-2. vary held-out contexts;
-3. add distractor relations;
-4. compare against a memorization baseline;
-5. repeat on independently generated datasets;
-6. require zero invariant violations.
+## Interpretation
+This is evidence that a declared candidate-synthesis mechanism can select a rule that generalizes on this toy task. It is not evidence that GROWER autonomously invented the grammar, nor an AGI result. The grammar was fixed by the experiment designer.
+
+## Falsification still required
+- independently generated datasets;
+- grammar expansion with distractor rules;
+- hidden test sets;
+- multiple relation families;
+- complexity penalty and tie handling;
+- independent reproduction;
+- zero protected-invariant violations.
+
+## Evidence boundary
+The original semantic benchmark is explicitly rejected and must not be cited as a positive result. This corrected run is a capability-path demonstration only.
