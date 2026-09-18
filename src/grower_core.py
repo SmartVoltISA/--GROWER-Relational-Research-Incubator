@@ -63,10 +63,15 @@ class GrowthCycle:
     def record_evidence(self, record: dict[str, Any]) -> None:
         if self.status not in {Status.TESTING, Status.PARTIAL, Status.NOT_PROVEN}:
             raise ValueError(f"cannot add evidence in state {self.status}")
+        if record.get("type") == "test_result":
+            raise PermissionError("test results must enter through record_test_result")
         self.evidence.append(dict(record))
 
     def record_test_result(self, record: dict[str, Any], *, boundary_status: str = "UNKNOWN") -> str:
         """Evaluate evidence centrally before any SUPPORTED decision."""
+        allowed_boundary = {"ADMISSIBLE", "FAIL", "NOT_PROVEN", "BOUNDARY_REVIEW_REQUIRED", "UNKNOWN"}
+        if boundary_status not in allowed_boundary:
+            raise ValueError(f"invalid boundary status: {boundary_status}")
         evidence_status = evaluate_evidence(record)
         entry = dict(record)
         entry.update({
@@ -74,7 +79,9 @@ class GrowthCycle:
             "evidence_status": evidence_status,
             "boundary_status": boundary_status,
         })
-        self.record_evidence(entry)
+        if self.status not in {Status.TESTING, Status.PARTIAL, Status.NOT_PROVEN}:
+            raise ValueError(f"cannot record test result in state {self.status}")
+        self.evidence.append(entry)
         return evidence_status
 
     def decide(self, status: Status, reason: str) -> None:
