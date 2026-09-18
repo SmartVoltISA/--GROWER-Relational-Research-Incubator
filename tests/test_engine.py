@@ -43,7 +43,7 @@ def test_assembler_accepts_supported_components():
     }, boundary_status=evaluate_boundary({"falsification_attempted": True, "controls_pass": True, "uncertainty_reported": True}))
     cycle.decide(Status.SUPPORTED, "gated evidence")
     cert = issue_certificate(cycle, "E1")
-    result = assemble([Component("C1", Status.SUPPORTED, ("E1",), "math", ("A",), cert)], "target")
+    result = assemble([Component("C1", Status.SUPPORTED, ("E1",), "math", ("A",), cert, "CERT-1")], "target")
     assert result["status"] == "ASSEMBLED"
     assert result["promotion"] == "EXTERNAL_HUMAN_DECISION_REQUIRED"
     assert result["promotion"] == "EXTERNAL_HUMAN_DECISION_REQUIRED"
