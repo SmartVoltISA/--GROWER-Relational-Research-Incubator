@@ -53,16 +53,17 @@ def evaluate(
             return BoundaryDecision("BOUNDARY_REVIEW_REQUIRED", ("protected boundary change requires external OperatorAuthority authorization",), True, _BOUNDARY_DECISION_ISSUER)
         if surgery_request.target is not ProtectedTarget.GROWTH_BOUNDARY:
             return BoundaryDecision("FAIL", ("authorization target is not GROWTH_BOUNDARY",), True, _BOUNDARY_DECISION_ISSUER)
-        try:
-            operator_authority.consume(operator_authorization, surgery_request)
-        except PermissionError as exc:
-            return BoundaryDecision("FAIL", (str(exc),), True, _BOUNDARY_DECISION_ISSUER)
-
     if not candidate.get("falsification_attempted", False):
         return BoundaryDecision("NOT_PROVEN", ("falsification has not been attempted",), boundary_change, _BOUNDARY_DECISION_ISSUER)
     if not candidate.get("controls_pass", False):
         return BoundaryDecision("NOT_PROVEN", ("required controls have not passed",), boundary_change, _BOUNDARY_DECISION_ISSUER)
     if not candidate.get("uncertainty_reported", False):
         return BoundaryDecision("NOT_PROVEN", ("uncertainty has not been reported",), boundary_change, _BOUNDARY_DECISION_ISSUER)
+
+    if boundary_change:
+        try:
+            operator_authority.consume(operator_authorization, surgery_request)
+        except PermissionError as exc:
+            return BoundaryDecision("FAIL", (str(exc),), True, _BOUNDARY_DECISION_ISSUER)
 
     return BoundaryDecision("ADMISSIBLE", ("candidate remains inside the protected growth boundary",), boundary_change, _BOUNDARY_DECISION_ISSUER)
