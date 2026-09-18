@@ -32,7 +32,7 @@ Static adversarial review of all public functions/methods currently exposed by s
 
 **FACT-001 — No alternate promotion API found.** Promotion to SUPPORTED is centralized in GrowthCycle.decide and requires a genuine cycle-bound test result with ADMISSIBLE boundary and valid fingerprint.
 
-**FACT-002 — Certificate assembly is attestation-bound.** Certificates carry cycle ID, evidence ID and evidence fingerprint; assembly requires matching cycle and evidence IDs.
+**FACT-002 — Certificate assembly is attestation-bound.** Certificates carry cycle ID, evidence ID, evidence fingerprint and the locked cycle-input fingerprint; issuance rechecks cycle-input integrity, and assembly requires matching cycle/evidence bindings.
 
 **FACT-003 — Operator surgery is external and one-shot.** Protected growth-boundary changes require explicit confirmation, external proof, target binding and one-shot consumption.
 
@@ -44,7 +44,14 @@ Static adversarial review of all public functions/methods currently exposed by s
 
 **REVIEW-002 — CapabilityState is descriptive.** Its mutable CAN/MAY sets are not themselves an execution authorization boundary.
 
-**REVIEW-003 — SpaceCandidate ID derivation.** Current ID uses parent + relations. Because the generator does not currently accept goal/organs/invariants as independent inputs, this is not presently an alternate path; if those become configurable, include the full canonical manifest in the ID.
+**FACT-006 — SPACE candidate identity.** `grow_space()` derives the candidate ID from the full canonical manifest currently used by the generator: parent, goal, organs, support nodes, relations and invariants.
 
 ## Verification status
 This review is source-level/static. It records architecture facts and regression tests added to the repository. It does not claim GitHub Actions or external runtime execution of all tests on 2026-09-18.
+
+
+**FACT-007 — Duplicate test-result IDs.** A cycle now rejects reuse of an `evidence_id` among `test_result` entries, preventing ambiguous evidence identity within one cycle.
+
+**REVIEW-004 — Archive storage.** `archive_branch()` still writes to a caller-owned mutable list. The stored record is detached from the input, but canonical append-only/tamper-evident history is not yet implemented.
+
+**REVIEW-005 — Runtime verification.** GitHub source inspection and test additions were performed, but no full local runtime execution is claimed in this review.
