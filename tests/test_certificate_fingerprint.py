@@ -20,7 +20,7 @@ def test_certificate_carries_evidence_fingerprint():
 def test_forged_certificate_missing_fingerprint_is_blocked():
     c=make_cycle()
     from assembler import _CERTIFICATE_ISSUER
-    cert=VerificationCertificate("CERT-FP","E1","",_CERTIFICATE_ISSUER)
+    cert=VerificationCertificate("CERT-FP","E1","","",_CERTIFICATE_ISSUER)
     try: assemble([Component("C",Status.SUPPORTED,("E1",),"x",certificate=cert,cycle_id="CERT-FP")],"T")
     except PermissionError: pass
     else: raise AssertionError("certificate without evidence fingerprint was accepted")
