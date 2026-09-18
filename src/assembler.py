@@ -16,6 +16,7 @@ class VerificationCertificate:
     cycle_id: str
     evidence_id: str
     evidence_fingerprint: str
+    input_fingerprint: str
     _issuer: object
 
 
@@ -33,6 +34,8 @@ class Component:
 def issue_certificate(cycle: GrowthCycle, evidence_id: str) -> VerificationCertificate:
     if cycle.status is not Status.SUPPORTED:
         raise PermissionError("certificate requires SUPPORTED cycle")
+    if not cycle._inputs_unchanged():
+        raise PermissionError("cycle inputs were modified after verification")
     matches = [
         e for e in cycle.evidence
         if e.get("type") == "test_result"
@@ -48,7 +51,7 @@ def issue_certificate(cycle: GrowthCycle, evidence_id: str) -> VerificationCerti
     match = next((e for e in matches if evidence_id == e.get("evidence_id")), None)
     if match is None:
         raise PermissionError("certificate evidence is not a supported gated result")
-    return VerificationCertificate(cycle.cycle_id, evidence_id, match["_fingerprint"], _CERTIFICATE_ISSUER)
+    return VerificationCertificate(cycle.cycle_id, evidence_id, match["_fingerprint"], cycle._locked_fingerprint or "", _CERTIFICATE_ISSUER)
 
 
 def assemble(components: list[Component], target: str) -> dict:
@@ -73,6 +76,8 @@ def assemble(components: list[Component], target: str) -> dict:
             raise ValueError("component evidence IDs must be unique")
         if not c.certificate.evidence_fingerprint.strip():
             raise PermissionError("certificate evidence fingerprint is required")
+        if not c.certificate.input_fingerprint.strip():
+            raise PermissionError("certificate input fingerprint is required")
     return {
         "target": target,
         "components": [c.component_id for c in components],
