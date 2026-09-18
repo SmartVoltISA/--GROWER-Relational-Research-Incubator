@@ -34,6 +34,8 @@ def issue_certificate(cycle: GrowthCycle, evidence_id: str) -> VerificationCerti
         if e.get("type") == "test_result"
         and e.get("evidence_status") == "SUPPORTED"
         and e.get("boundary_status") == "ADMISSIBLE"
+        and e.get("_cycle_id") == cycle.cycle_id
+        and e.get("_evidence_issuer") is cycle._evidence_issuer
     ]
     if not any(evidence_id == e.get("evidence_id") for e in matches):
         raise PermissionError("certificate evidence is not a supported gated result")
