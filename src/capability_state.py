@@ -1,3 +1,4 @@
+"""Explicit capability state: capability does not equal authority."""
 from dataclasses import dataclass, field
 
 @dataclass
@@ -20,9 +21,4 @@ class CapabilityState:
             self.knows_not.add(capability)
 
     def snapshot(self) -> dict:
-        return {
-            "CAN": sorted(self.can),
-            "MAY": sorted(self.may),
-            "DID": list(self.did),
-            "KNOWS_NOT": sorted(self.knows_not),
-        }
+        return {"CAN": sorted(self.can), "MAY": sorted(self.may), "DID": list(self.did), "KNOWS_NOT": sorted(self.knows_not)}
