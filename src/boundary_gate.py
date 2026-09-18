@@ -14,6 +14,9 @@ class BoundaryDecision:
     status: str
     reasons: tuple[str, ...]
     boundary_change_proposed: bool = False
+    _issuer: object = None
+
+_BOUNDARY_DECISION_ISSUER = object()
 
 PROTECTED_INVARIANTS = (
     "identity", "cognition_authority", "guardian_authority",
@@ -42,28 +45,24 @@ def evaluate(
         reasons.append(f"unknown protected violation(s): {sorted(unknown)}")
     if violations:
         reasons.append(f"protected invariant violation(s): {sorted(violations)}")
-        return BoundaryDecision("FAIL", tuple(reasons), bool(candidate.get("boundary_change_proposed", False)))
+        return BoundaryDecision("FAIL", tuple(reasons), bool(candidate.get("boundary_change_proposed", False)), _BOUNDARY_DECISION_ISSUER)
 
     boundary_change = bool(candidate.get("boundary_change_proposed", False))
     if boundary_change:
         if not (operator_authority and operator_authorization and surgery_request):
-            return BoundaryDecision(
-                "BOUNDARY_REVIEW_REQUIRED",
-                ("protected boundary change requires external OperatorAuthority authorization",),
-                True,
-            )
+            return BoundaryDecision("BOUNDARY_REVIEW_REQUIRED", ("protected boundary change requires external OperatorAuthority authorization",), True, _BOUNDARY_DECISION_ISSUER)
         if surgery_request.target is not ProtectedTarget.GROWTH_BOUNDARY:
-            return BoundaryDecision("FAIL", ("authorization target is not GROWTH_BOUNDARY",), True)
+            return BoundaryDecision("FAIL", ("authorization target is not GROWTH_BOUNDARY",), True, _BOUNDARY_DECISION_ISSUER)
         try:
             operator_authority.consume(operator_authorization, surgery_request)
         except PermissionError as exc:
-            return BoundaryDecision("FAIL", (str(exc),), True)
+            return BoundaryDecision("FAIL", (str(exc),), True, _BOUNDARY_DECISION_ISSUER)
 
     if not candidate.get("falsification_attempted", False):
-        return BoundaryDecision("NOT_PROVEN", ("falsification has not been attempted",), boundary_change)
+        return BoundaryDecision("NOT_PROVEN", ("falsification has not been attempted",), boundary_change, _BOUNDARY_DECISION_ISSUER)
     if not candidate.get("controls_pass", False):
-        return BoundaryDecision("NOT_PROVEN", ("required controls have not passed",), boundary_change)
+        return BoundaryDecision("NOT_PROVEN", ("required controls have not passed",), boundary_change, _BOUNDARY_DECISION_ISSUER)
     if not candidate.get("uncertainty_reported", False):
-        return BoundaryDecision("NOT_PROVEN", ("uncertainty has not been reported",), boundary_change)
+        return BoundaryDecision("NOT_PROVEN", ("uncertainty has not been reported",), boundary_change, _BOUNDARY_DECISION_ISSUER)
 
-    return BoundaryDecision("ADMISSIBLE", ("candidate remains inside the protected growth boundary",), boundary_change)
+    return BoundaryDecision("ADMISSIBLE", ("candidate remains inside the protected growth boundary",), boundary_change, _BOUNDARY_DECISION_ISSUER)
