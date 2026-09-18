@@ -2,6 +2,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+import hashlib
+import json
 from evidence_gate import evaluate as evaluate_evidence
 from boundary_gate import BoundaryDecision, _BOUNDARY_DECISION_ISSUER
 
@@ -49,6 +51,8 @@ class GrowthCycle:
         if boundary_status._issuer is not _BOUNDARY_DECISION_ISSUER: raise PermissionError("untrusted boundary decision")
         evidence_status=evaluate_evidence(record)
         entry=dict(record); entry.update({"type":"test_result","evidence_status":evidence_status,"boundary_status":boundary_status.status,"_cycle_id":self.cycle_id,"_evidence_issuer":self._evidence_issuer})
+        canonical = {k: v for k, v in entry.items() if k not in {'_evidence_issuer', '_fingerprint'}}
+        entry['_fingerprint'] = hashlib.sha256(json.dumps(canonical, sort_keys=True, default=str, separators=(',', ':')).encode()).hexdigest()
         self.evidence.append(entry); return evidence_status
     def decide(self,status:Status,reason:str)->None:
         allowed={Status.SUPPORTED,Status.PARTIAL,Status.NOT_PROVEN,Status.FAIL,Status.INVALID,Status.ARCHIVED}
@@ -56,7 +60,7 @@ class GrowthCycle:
         if self.status in {Status.SUPPORTED,Status.FAIL,Status.INVALID,Status.ARCHIVED}: raise ValueError(f"terminal cycle cannot transition from {self.status}")
         if not reason.strip(): raise ValueError("decision reason is required")
         if status is Status.SUPPORTED:
-            supported=any(e.get("type")=="test_result" and e.get("evidence_status")=="SUPPORTED" and e.get("boundary_status")=="ADMISSIBLE" and e.get("_cycle_id")==self.cycle_id and e.get("_evidence_issuer") is self._evidence_issuer for e in self.evidence)
+            supported=any(e.get("type")=="test_result" and e.get("evidence_status")=="SUPPORTED" and e.get("boundary_status")=="ADMISSIBLE" and e.get("_cycle_id")==self.cycle_id and e.get("_evidence_issuer") is self._evidence_issuer and e.get("_fingerprint")==hashlib.sha256(json.dumps({k:v for k,v in e.items() if k not in {'_evidence_issuer','_fingerprint'}}, sort_keys=True, default=str, separators=(',', ':')).encode()).hexdigest() and evaluate_evidence(e)=="SUPPORTED" for e in self.evidence)
             if not supported: raise PermissionError("SUPPORTED requires a centrally evaluated evidence result and ADMISSIBLE boundary")
         self.evidence.append({"type":"decision","status":status.value,"reason":reason}); self._set_status(status)
 
