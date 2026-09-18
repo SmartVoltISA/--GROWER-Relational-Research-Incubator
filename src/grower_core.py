@@ -49,7 +49,17 @@ class GrowthCycle:
             raise ValueError(f"duplicate hypothesis: {hypothesis.id}")
         self.hypotheses.append(hypothesis)
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "status" and hasattr(self, "status"):
+            raise AttributeError("status is controlled by GrowthCycle transitions")
+        object.__setattr__(self, name, value)
+
+    def _set_status(self, status: Status) -> None:
+        object.__setattr__(self, "status", status)
+
     def lock_for_testing(self) -> None:
+        if self.status not in {Status.CANDIDATE, Status.PARTIAL, Status.NOT_PROVEN}:
+            raise ValueError(f"cannot start testing from state {self.status}")
         if not self.goal.strip():
             raise ValueError("goal is required")
         if not self.relations:
@@ -58,7 +68,7 @@ class GrowthCycle:
             raise ValueError("at least two competing hypotheses are required")
         if any(not h.null_hypothesis.strip() for h in self.hypotheses):
             raise ValueError("every hypothesis requires a null hypothesis")
-        self.status = Status.TESTING
+        self._set_status(Status.TESTING)
 
     def record_evidence(self, record: dict[str, Any]) -> None:
         if self.status not in {Status.TESTING, Status.PARTIAL, Status.NOT_PROVEN}:
@@ -88,6 +98,8 @@ class GrowthCycle:
         allowed = {Status.SUPPORTED, Status.PARTIAL, Status.NOT_PROVEN, Status.FAIL, Status.INVALID, Status.ARCHIVED}
         if status not in allowed:
             raise ValueError(f"invalid terminal decision: {status}")
+        if self.status in {Status.SUPPORTED, Status.FAIL, Status.INVALID, Status.ARCHIVED}:
+            raise ValueError(f"terminal cycle cannot transition from {self.status}")
         if not reason.strip():
             raise ValueError("decision reason is required")
         if status is Status.SUPPORTED:
@@ -100,4 +112,4 @@ class GrowthCycle:
             if not supported:
                 raise PermissionError("SUPPORTED requires a centrally evaluated evidence result and ADMISSIBLE boundary")
         self.evidence.append({"type": "decision", "status": status.value, "reason": reason})
-        self.status = status
+        self._set_status(status)
